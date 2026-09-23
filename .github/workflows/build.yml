@@ -1,0 +1,43 @@
+name: Build vcam
+
+on:
+  push:
+    branches:
+      - patch-1
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install ldid xz
+
+      - name: Install RootHide Theos
+        run: |
+          git clone --recursive https://github.com/roothide/theos.git ~/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          echo "PATH=$HOME/theos/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install iOS SDK
+        run: |
+          curl -fsSL https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz -o /tmp/sdk.tar.xz
+          mkdir -p $HOME/theos/sdks
+          tar -xf /tmp/sdk.tar.xz -C $HOME/theos/sdks
+
+      - name: Build package
+        run: |
+          export THEOS=$HOME/theos
+          make clean
+          make package FINALPACKAGE=1
+
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcam-deb
+          path: packages/*.deb
